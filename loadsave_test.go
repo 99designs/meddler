@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/mattn/go-sqlite3"
+	"context"
 )
 
 func TestLoad(t *testing.T) {
@@ -15,7 +16,7 @@ func TestLoad(t *testing.T) {
 	elt := new(Person)
 	elt.Age = 50
 	elt.Closed = time.Now()
-	if err := Load(db, "person", elt, 2); err != nil {
+	if err := Load(context.Background(), db, "person", elt, 2); err != nil {
 		t.Errorf("Load error on Bob: %v", err)
 		return
 	}
@@ -31,7 +32,7 @@ func TestLoadUint(t *testing.T) {
 	elt := new(UintPerson)
 	elt.Age = 50
 	elt.Closed = time.Now()
-	if err := Load(db, "person", elt, 2); err != nil {
+	if err := Load(context.Background(), db, "person", elt, 2); err != nil {
 		t.Errorf("Load error on Bob: %v", err)
 		return
 	}
@@ -60,7 +61,7 @@ func TestSave(t *testing.T) {
 	if err != nil {
 		t.Errorf("DB error on begin: %v", err)
 	}
-	if err = Save(tx, "person", chris); err != nil {
+	if err = Save(context.Background(), tx, "person", chris); err != nil {
 		t.Errorf("DB error on Save: %v", err)
 	}
 
@@ -72,7 +73,7 @@ func TestSave(t *testing.T) {
 	chris.Email = "chris@chrischris.com"
 	chris.Age = 27
 
-	if err = Save(tx, "person", chris); err != nil {
+	if err = Save(context.Background(), tx, "person", chris); err != nil {
 		t.Errorf("DB error on Save: %v", err)
 	}
 	if chris.ID != id {
@@ -116,7 +117,7 @@ func TestDriverErr(t *testing.T) {
 	once.Do(setup)
 	// insert into an invalid table
 	alice.ID = 0
-	err = Insert(db, "invalid", alice)
+	err = Insert(context.Background(), db, "invalid", alice)
 	if err == nil {
 		t.Fatal("insert into invalid table, want error, got none")
 	}
@@ -126,5 +127,18 @@ func TestDriverErr(t *testing.T) {
 	}
 	if _, ok := err.(sqlite3.Error); !ok {
 		t.Errorf("DriverErr: want sqlite3 error, got %T", err)
+	}
+}
+
+func TestContextCancellation(t *testing.T) {
+	once.Do(setup)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1000 * time.Millisecond)
+	cancel()
+
+	var dst Person
+	err := QueryRow(ctx, db, &dst, "SELECT 1")
+	if err != context.Canceled {
+		t.Errorf("select from cancelled context should error")
 	}
 }

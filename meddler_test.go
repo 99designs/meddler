@@ -2,6 +2,7 @@ package meddler
 
 import (
 	"testing"
+	"context"
 )
 
 type ItemJson struct {
@@ -33,14 +34,14 @@ func TestJsonMeddler(t *testing.T) {
 		},
 	}
 
-	if err := Save(db, "item", elt); err != nil {
+	if err := Save(context.Background(), db, "item", elt); err != nil {
 		t.Errorf("Save error: %v", err)
 	}
 	id := elt.ID
 
 	// load it again
 	elt = new(ItemJson)
-	if err := Load(db, "item", elt, id); err != nil {
+	if err := Load(context.Background(),db, "item", elt, id); err != nil {
 		t.Errorf("Load error: %v", err)
 	}
 
@@ -81,14 +82,14 @@ func TestGobMeddler(t *testing.T) {
 		},
 	}
 
-	if err := Save(db, "item", elt); err != nil {
+	if err := Save(context.Background(),db, "item", elt); err != nil {
 		t.Errorf("Save error: %v", err)
 	}
 	id := elt.ID
 
 	// load it again
 	elt = new(ItemGob)
-	if err := Load(db, "item", elt, id); err != nil {
+	if err := Load(context.Background(),db, "item", elt, id); err != nil {
 		t.Errorf("Load error: %v", err)
 	}
 
