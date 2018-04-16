@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"reflect"
 	"time"
 )
@@ -237,20 +238,15 @@ func (zip JSONMeddler) PostRead(fieldAddr, scanTarget interface{}) error {
 			return fmt.Errorf("Error creating gzip Reader: %v", err)
 		}
 		defer gzipReader.Close()
-		jsonDecoder := json.NewDecoder(gzipReader)
-		if err := jsonDecoder.Decode(fieldAddr); err != nil {
-			return fmt.Errorf("JSON decoder/gzip error: %v", err)
-		}
-		if err := gzipReader.Close(); err != nil {
-			return fmt.Errorf("Closing gzip reader: %v", err)
-		}
 
-		return nil
+		raw, err = ioutil.ReadAll(gzipReader)
+		if err != nil {
+			return fmt.Errorf("JSON decoder/io error: %v", err)
+		}
 	}
 
 	// decode json
-	jsonDecoder := json.NewDecoder(bytes.NewReader(raw))
-	if err := jsonDecoder.Decode(fieldAddr); err != nil {
+	if err := json.Unmarshal(raw, fieldAddr); err != nil {
 		return fmt.Errorf("JSON decode error: %v", err)
 	}
 
@@ -258,28 +254,28 @@ func (zip JSONMeddler) PostRead(fieldAddr, scanTarget interface{}) error {
 }
 
 func (zip JSONMeddler) PreWrite(field interface{}) (saveValue interface{}, err error) {
-	buffer := new(bytes.Buffer)
-
-	if zip {
-		// json encode and gzip
-		gzipWriter := gzip.NewWriter(buffer)
-		defer gzipWriter.Close()
-		jsonEncoder := json.NewEncoder(gzipWriter)
-		if err := jsonEncoder.Encode(field); err != nil {
-			return nil, fmt.Errorf("JSON encoding/gzip error: %v", err)
-		}
-		if err := gzipWriter.Close(); err != nil {
-			return nil, fmt.Errorf("Closing gzip writer: %v", err)
-		}
-
-		return buffer.Bytes(), nil
-	}
-
-	// json encode
-	jsonEncoder := json.NewEncoder(buffer)
-	if err := jsonEncoder.Encode(field); err != nil {
+	raw, err := json.Marshal(field)
+	if err != nil {
 		return nil, fmt.Errorf("JSON encoding error: %v", err)
 	}
+
+	if !zip {
+		return string(raw), nil
+	}
+
+	// json encode and gzip
+	var buffer bytes.Buffer
+	gzipWriter := gzip.NewWriter(&buffer)
+
+	fmt.Println("writing ", string(raw))
+	_, err = gzipWriter.Write(raw)
+	if err != nil {
+		return nil, fmt.Errorf("JSON encoding/gzip: %v", err)
+	}
+	if err := gzipWriter.Close(); err != nil {
+		return nil, fmt.Errorf("Closing gzip writer: %v", err)
+	}
+
 	return buffer.Bytes(), nil
 }
 
