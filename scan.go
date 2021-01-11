@@ -416,7 +416,7 @@ func (d *Database) Targets(dst interface{}, columns []string) ([]interface{}, er
 			targets = append(targets, new(interface{}))
 
 			if Debug {
-				log.Printf("meddler.Targets: column [%s] not found in struct", name)
+				log.Printf("meddler.Targets: column [%s] not found in struct %T", name, dst)
 			}
 		}
 	}
@@ -454,7 +454,7 @@ func (d *Database) WriteTargets(dst interface{}, columns []string, targets []int
 		} else {
 			// not destination, so throw this away
 			if Debug {
-				log.Printf("meddler.WriteTargets: column [%s] not found in struct", name)
+				log.Printf("meddler.WriteTargets: column [%s] not found in struct %T", name, dst)
 			}
 		}
 	}
